@@ -35,90 +35,21 @@
 
 有两种方案对应两种方法
 
-方案1
-
-- 优点：不需要登录A账号，操作步骤少
-
-- 缺点：由于接口限制，可能无法获得完整的关注列表进行关注。
-
-方案2：
+方案1：
 
 - 优点：可以获得完整的关注列表关注。
 
 - 缺点：需要登录A账号，操作步骤多。
 
+
 ### 方案1
+1. CMD输入
+   ```bash
+   chrome.exe --disable-web-security --user-data-dir="C:/ChromeDev"
+   ```
 
-1. 前往[微博首页](https://www.weibo.com/)，登录B账号
-2. 进入A的首页。
-3. `F12`打开开发者工具，在网络中选择任意一个请求，找到请求头中的**x-xsrf-token**，复制`：`后的内容，
-4. 在控制台粘贴以下代码，并填入上一步得到的token，回车执行代码，等待控制台提示成功。
-
-> 由于接口限制可能无法获得完整的关注列表
-
-``` javascript
-let list = []
-let token = ''
-let key = 'followList'
-const getFollowed = async (page = 1, list = []) => {
-  const uid = window.location.pathname.split('/').pop()
-  const res = await fetch(`/ajax/friendships/friends?page=${page}&uid=${uid}`, {
-    method: 'GET',
-    headers: {
-      "content-type": 'application/json'
-    }
-  }).then(res => res.json())
-  if (res.users.length > 0) {
-    list.push(...res.users)
-    await getFollowed(++page, list)
-  }
-  return list
-}
-
-function sleep(time) {
-  return new Promise((resolve) => setTimeout(resolve, time));
-}
-
-const batchFollow = async (list = [], index = 0) => {
-  const followUser = list[index]
-  await fetch(`/ajax/friendships/create`, {
-    method: 'POST',
-    headers: {
-      "content-type": 'application/json;charset=UTF-8',
-      "accept": "application/json, text/plain, */*",
-      "x-xsrf-token": token
-    },
-    body: JSON.stringify({
-      friend_uid: followUser.id,
-      lpage: "profile",
-      page: "profile"
-    }
-    )
-  }).then(res => res.json()).then((res) => {
-    console.log(`[${++index}/${list.length}],${res.name},关注成功`)
-  })
-  if (list.length > 0) {
-    await sleep(1000)
-    await batchFollow(list, index)
-  }
-  return list
-}
-
-const start = async (t) => {
-  token = t
-  list = (await getFollowed()).filter(item => !item.following)
-  console.log(`获取列表成功,共${list.length}个`);
-  batchFollow(list)
-}
-start("(复制的token)") //例如：start("ApMq0KHPGo3SBclIGe6dMpn7")
-```
-
-
-
-### 方案2
 1. 前往[微博首页](https://www.weibo.com/)，登录A账号
 2. `F12`打开开发者工具，在控制台输入以下代码，等待控制台提示成功。
-
 ``` javascript
 const key = 'followList'
 const getOwnFollowed = async (page = 1, list = []) => {
@@ -151,8 +82,9 @@ start()
    ![csrf-token位置](https://github.com/lxw15337674/weiboSyncFollow/assets/19898669/d5691f35-9d14-41a6-855d-8d6d9de3eecb)
 6. 在控制台粘贴以下代码，并填入上一步得到的token，回车执行代码，等待控制台提示成功。
 
-```javascript
-let token = ''
+NEW:
+``` javascript
+let token = '';
 function sleep(time) {
   return new Promise((resolve) => setTimeout(resolve, time));
 }
@@ -163,17 +95,27 @@ const getOwnFollowed = async (page = 1, list = []) => {
     headers: {
       "content-type": 'application/json'
     }
-  }).then(res => res.json())
-  const users = res.data.follows.users
+  }).then(res => res.json());
+  const users = res.data.follows.users;
   if (users.length > 0) {
-    list.push(...users)
-    await getOwnFollowed(++page, list)
+    list.push(...users);
+    await getOwnFollowed(++page, list);
   }
-  return list
+  return list;
+}
+
+const getRandomDelay = () => {
+  const min = 30000; // 30 seconds
+  const max = 120000; // 2 minutes
+  const delay = Math.floor(Math.random() * (max - min + 1)) + min;
+  console.log(`随机延迟 ${delay / 1000} 秒`);
+  return delay;
 }
 
 const batchFollow = async (list = [], index = 0) => {
-  const followUser = list[index++]
+  if (index >= list.length) return; // 结束条件
+  const followUser = list[index];
+  
   await fetch(`/ajax/friendships/create`, {
     method: 'POST',
     headers: {
@@ -185,27 +127,22 @@ const batchFollow = async (list = [], index = 0) => {
       friend_uid: followUser.id,
       lpage: "profile",
       page: "profile"
-    }
-    )
+    })
   }).then(res => res.json()).then(async (res) => {
-    console.log(`[${index + 1}/${list.length}],${res.name},关注成功`)
-    if (list.length > 0) {
-      await sleep(2000)
-      await batchFollow(list, index)
-    }
-  })
-  return list
+    console.log(`[${index + 1}/${list.length}], ${res.name}, 关注成功`);
+    await sleep(getRandomDelay()); // 等待随机时间
+    await batchFollow(list, index + 1); // 递归调用关注下一个用户
+  });
 }
 
 const start = async (t) => {
-  token = t
-  const list = await getOwnFollowed()
-  let unFollowList = JSON.parse(localStorage.getItem('followList')).filter(unFollowItem => list.findIndex(item => item.id === unFollowItem.id) === -1)
+  token = t;
+  const list = await getOwnFollowed();
+  let unFollowList = JSON.parse(localStorage.getItem('followList')).filter(unFollowItem => list.findIndex(item => item.id === unFollowItem.id) === -1);
   console.log(`获取待关注列表成功,共${unFollowList.length}个`);
-  await batchFollow(unFollowList)
+  await batchFollow(unFollowList);
 }
 
-start("(复制的token)") //例如：start("ApMq0KHPGo3SBclIGe6dMpn7")
+start("(复制的token)"); // 例如：start("ApMq0KHPGo3SBclIGe6dMpn7")
+
 ```
-
-
