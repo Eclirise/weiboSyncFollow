@@ -1,4 +1,4 @@
-```markdown
+
 # 微博同步关注列表
 
 > A：待同步账号。B：需要同步的账号
@@ -13,7 +13,7 @@
 
 ## 修改点
 
-本项目 `forked from lxw15337674/weiboSyncFollow`（[项目地址](https://github.com/lxw15337674/weiboSyncFollow)），增加了关注时的随机等待时间，以防止被微博服务器限流封禁。被封禁后无法搜索到被封账号，故删除了方案 1。使用 Chrome 浏览器时，需在 Chrome 根目录下运行以下命令：
+本项目 forked from `lxw15337674/weiboSyncFollow`（[项目地址](https://github.com/lxw15337674/weiboSyncFollow)），增加了关注时的随机等待时间，以防止被微博服务器限流封禁。被封禁后无法搜索到被封账号，故删除了方案 1。使用 Chrome 浏览器时，需在 Chrome 根目录下运行以下命令：
 
 ```bash
 chrome.exe --disable-web-security --user-data-dir="C:/ChromeDev"
